@@ -1,0 +1,8 @@
+{
+  "name": "parse.js",
+  "description": "Parse csv file",
+  "version": "1.0.0",
+  "dependencies": {
+    "sqlite3": "^4.1.1"
+  }
+}

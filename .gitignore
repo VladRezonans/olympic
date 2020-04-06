@@ -1,0 +1,4 @@
+.idea
+node_modules
+athlete_events.csv
+olympic_history.db
