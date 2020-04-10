@@ -20,7 +20,7 @@ function unquotes (str) {
     return str.substring(start, end + 1);
 }
 
-const hashToText = function (params) {
+const hashToText = (params) => {
     let result = [];
 
     Object.keys(params).forEach(function(key) {
@@ -32,20 +32,15 @@ const hashToText = function (params) {
     return `{${result.join(', ')}}`;
 };
 
-const removeSuffix = function (str) {
-    return str.replace(/-[0-9]$/, '');
-};
+const removeSuffix = (str) => str.replace(/-[0-9]$/, '');
+const removeTagged = (str) => str.replace(/(\"+)(.*)(\"+)/g, '').replace(/\((.*)\)/g, '');
 
-const removeTagged = function (str) {
-    return str.replace(/(\"+)(.*)(\"+)/g, '').replace(/\((.*)\)/g, '');
-};
-
-const parse = function (line) {
-    let bufLine = line.substring(0, line.length - 1);
-    let bp = bufLine.split('",');
-    let ad = bp[3].split(',');
-    let year = bp[6].split(',');
-    let params = [bp[0], bp[1], bp[2], ad[0], ad[1], ad[2], ad[3], bp[4], bp[5], year[0], year[1], bp[7], bp[8],
+const parse = (line) => {
+    const bufLine = line.substring(0, line.length - 1);
+    const bp = bufLine.split('",');
+    const ad = bp[3].split(',');
+    const year = bp[6].split(',');
+    const params = [bp[0], bp[1], bp[2], ad[0], ad[1], ad[2], ad[3], bp[4], bp[5], year[0], year[1], bp[7], bp[8],
         bp[9], bp[10]];
 
     return strip(params);

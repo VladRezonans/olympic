@@ -26,6 +26,9 @@ db.clear().then(() => {
             console.log(err);
         } else {
             chain = chain.then(() => {
+                return db.save();
+            })
+            .then(() => {
                 let end = new Date();
                 console.log(`\nThe End: ${(end.getTime() - start.getTime())/1000} seconds`);
             });
