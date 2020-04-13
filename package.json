@@ -1,12 +1,18 @@
 {
-  "name": "parse.js",
+  "name": "parse",
   "description": "Parse csv file",
+  "scripts": {
+    "lint": "npx eslint *.js --fix",
+    "parse": "node parse.js athlete_events.csv"
+  },
   "version": "1.0.0",
   "dependencies": {
     "sqlite3": "^4.1.1"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-node": "^11.1.0"
   }
 }
