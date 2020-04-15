@@ -14,7 +14,7 @@ const clear = () => {
   const promises = tables.map((table) => new Promise((resolve, reject) => {
     database.run(`DELETE FROM ${table}`, (err) => {
       if (err) {
-        console.log(err.message);
+        process.stdout.write(`\nclear db: ${err}`);
         reject(err);
       } else {
         resolve();
@@ -33,7 +33,7 @@ function insert(table, bufKey, params) {
 
     database.run(sql, function (err) {
       if (err) {
-        console.log('insert:', table);
+        process.stdout.write(`\ninsert: ${table}`);
         reject(err);
       } else {
         findBuffers[table][bufKey] = { id: this.lastID, ...params };
@@ -50,7 +50,7 @@ function update(table, id, bufKey, params) {
 
     database.run(sql, function (err) {
       if (err) {
-        console.log('update:', table, id, params);
+        process.stdout.write(`\nupdate: ${table} ${id} ${params}`);
         reject(err);
       } else {
         findBuffers[table][bufKey] = { id: this.lastID, ...params };
@@ -90,7 +90,7 @@ function insertMultipleRows(table, params) {
 
     database.run(sql, function (err) {
       if (err) {
-        console.log('insert multiple rows:', err);
+        process.stdout.write(`\ninsert multiple rows: ${err}`);
         reject(err);
       } else {
         resolve(this.lastID);
@@ -104,83 +104,59 @@ const save = () => {
   return Promise.all(promises);
 };
 
-const put = (params) => {
+const put = async (params) => {
   const [id, name, sex, age, height, weight, team, noc, game, year, season, city,
     sport, event, medal] = hp.parse(params);
-  let gameId; let sportId; let eventId; let
-    teamId;
 
   if (id !== 'ID' && id !== undefined) {
     if (year === '1906' && season === 'Summer') return;
     count += 1;
 
-    return Promise.resolve(createGame(game, { year, season, city }))
-      .then((tId) => {
-        gameId = tId;
-
-        // Sports
-        return findOrCreate('sports', sport, { name: sport });
-      })
-      .then((tId) => {
-        sportId = tId;
-
-        // Events
-        return findOrCreate('events', event, {
-          name: event,
-        });
-      })
-      .then((tId) => {
-        eventId = tId;
-
-        // Teams
-        return findOrCreate('teams', noc, {
-          name: hp.removeSuffix(team), noc_name: noc,
-        });
-      })
-      .then((tId) => {
-        teamId = tId;
-
-        // Athletes
-        const yearOfBirth = (age && age) ? year - age : null;
-        const params = hp.hashToText({ height, weight });
-
-        if (findBuffers.athletes[id] === undefined) {
-          findBuffers.athletes[id] = id;
-          saveBuffers.athletes.push({
-            id,
-            full_name: hp.removeTagged(name),
-            year_of_birth: yearOfBirth,
-            sex,
-            params,
-            team_id: teamId,
-          });
-        }
-      })
-      .then(() => {
-        // Results
-        const medalValue = {
-          NA: 0, Gold: 1, Silver: 2, Bronze: 3,
-        }[medal];
-
-        saveBuffers.results.push({
-          athlete_id: id, game_id: gameId, sport_id: sportId, event_id: eventId, medal: medalValue,
-        });
-      })
-      .then(() => {
-        if (count === 1000) {
-          process.stdout.write('*');
-          count = 0;
-          return save().then(() => {
-            saveBuffers.athletes = [];
-            saveBuffers.results = [];
-          });
-        }
-        return true;
-      })
-      .catch((err) => {
-        console.log('exit:', err.message);
-        process.exit(1);
+    try {
+      const gameId = await createGame(game, { year, season, city });
+      const sportId = await findOrCreate('sports', sport, { name: sport });
+      const eventId = await findOrCreate('events', event, { name: event });
+      const teamId = await findOrCreate('teams', noc, {
+        name: hp.removeSuffix(team), noc_name: noc,
       });
+
+      const yearOfBirth = (age && age) ? year - age : null;
+      const params = hp.hashToText({ height, weight });
+
+      // Athletes
+      if (findBuffers.athletes[id] === undefined) {
+        findBuffers.athletes[id] = id;
+        saveBuffers.athletes.push({
+          id,
+          full_name: hp.removeTagged(name),
+          year_of_birth: yearOfBirth,
+          sex,
+          params,
+          team_id: teamId,
+        });
+      }
+
+      // Results
+      const medalValue = {
+        NA: 0, Gold: 1, Silver: 2, Bronze: 3,
+      }[medal];
+
+      saveBuffers.results.push({
+        athlete_id: id, game_id: gameId, sport_id: sportId, event_id: eventId, medal: medalValue,
+      });
+
+      // Save buffers
+      if (count === 1000) {
+        process.stdout.write('*');
+        count = 0;
+        await save();
+        saveBuffers.athletes = [];
+        saveBuffers.results = [];
+      }
+    } catch (err) {
+      process.stdout.write(`\nexit: ${err.message}`);
+      process.exit(1);
+    }
   }
 };
 

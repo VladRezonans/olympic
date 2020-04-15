@@ -6,7 +6,9 @@ const db = require('./db');
 let lineEnd = '';
 const start = new Date();
 
-db.clear().then(() => {
+(async () => {
+  await db.clear();
+
   const stream = fs.createReadStream(filename, { encoding: 'utf8' });
   let chain = Promise.resolve();
 
@@ -25,13 +27,12 @@ db.clear().then(() => {
 
   stream.on('close', (err) => {
     if (err) {
-      console.log(err);
+      process.stdout.write(`\n${err}`);
     } else {
       chain = chain.then(() => db.save())
         .then(() => {
-          const end = new Date();
-          console.log(`\nThe End: ${(end.getTime() - start.getTime()) / 1000} seconds`);
+          process.stdout.write(`\nThe End: ${((new Date()).getTime() - start.getTime()) / 1000} seconds\n`);
         });
     }
   });
-});
+})();

@@ -3,7 +3,7 @@ function unquotes(str) {
   let end = str.length - 1;
 
   if (str[start] === '"') start += 1;
-  if (str[end] === '"') end += 1;
+  if (str[end] === '"') end -= 1;
 
   return str.substring(start, end + 1);
 }
