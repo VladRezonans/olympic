@@ -8,56 +8,40 @@ const findBuffers = {
   games: {}, teams: {}, events: {}, sports: {}, athletes: {},
 };
 const saveBuffers = { athletes: [], results: [] };
+const medals = {
+  NA: 0, Gold: 1, Silver: 2, Bronze: 3,
+};
 let count = 0;
 
-const clear = () => {
-  const promises = tables.map((table) => new Promise((resolve, reject) => {
-    database.run(`DELETE FROM ${table}`, (err) => {
-      if (err) {
-        process.stdout.write(`\nclear db: ${err}`);
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  }));
-
-  return Promise.all(promises);
-};
-
-function insert(table, bufKey, params) {
-  return new Promise((resolve, reject) => {
-    const columns = Object.keys(params).join(', ');
-    const values = Object.values(params).map((el) => `"${el}"`).join(', ');
-    const sql = `INSERT INTO ${table}(${columns}) VALUES(${values});`;
-
-    database.run(sql, function (err) {
-      if (err) {
-        process.stdout.write(`\ninsert: ${table}`);
-        reject(err);
-      } else {
-        findBuffers[table][bufKey] = { id: this.lastID, ...params };
-        resolve(this.lastID);
-      }
-    });
+const dbRun = (sql) => new Promise((resolve, reject) => {
+  database.run(sql, function (err) {
+    if (err) {
+      process.stdout.write(err);
+      reject(err);
+    } else {
+      resolve(this.lastID);
+    }
+    return this.lastID;
   });
+});
+
+const clear = () => Promise.all(tables.map((table) => dbRun(`DELETE FROM ${table}`)));
+
+async function insert(table, bufKey, params) {
+  const columns = Object.keys(params).join(', ');
+  const values = Object.values(params).map((el) => `"${el}"`).join(', ');
+  const sql = `INSERT INTO ${table}(${columns}) VALUES(${values});`;
+  const id = await dbRun(sql);
+  findBuffers[table][bufKey] = { id, ...params };
+  return id;
 }
 
-function update(table, id, bufKey, params) {
-  return new Promise((resolve, reject) => {
-    const set = Object.keys(params).map((key) => `${key} = "${params[key]}"`).join(', ');
-    const sql = `UPDATE ${table} SET ${set} WHERE id = ${id};`;
-
-    database.run(sql, function (err) {
-      if (err) {
-        process.stdout.write(`\nupdate: ${table} ${id} ${params}`);
-        reject(err);
-      } else {
-        findBuffers[table][bufKey] = { id: this.lastID, ...params };
-        resolve(this.lastID);
-      }
-    });
-  });
+async function update(table, tableId, bufKey, params) {
+  const set = Object.keys(params).map((key) => `${key} = "${params[key]}"`).join(', ');
+  const sql = `UPDATE ${table} SET ${set} WHERE id = ${tableId};`;
+  const id = await dbRun(sql);
+  findBuffers[table][bufKey] = { id, ...params };
+  return id;
 }
 
 function findOrCreate(table, searchKey, insertParams) {
@@ -83,20 +67,10 @@ function createGame(game, params) {
 }
 
 function insertMultipleRows(table, params) {
-  return new Promise((resolve, reject) => {
-    const columns = Object.keys(params[0]).join(', ');
-    const values = params.map((param) => `(${Object.values(param).map((el) => `"${el}"`).join(', ')})`).join(', ');
-    const sql = `INSERT INTO ${table}(${columns}) VALUES${values};`;
-
-    database.run(sql, function (err) {
-      if (err) {
-        process.stdout.write(`\ninsert multiple rows: ${err}`);
-        reject(err);
-      } else {
-        resolve(this.lastID);
-      }
-    });
-  });
+  const columns = Object.keys(params[0]).join(', ');
+  const values = params.map((param) => `(${Object.values(param).map((el) => `"${el}"`).join(', ')})`).join(', ');
+  const sql = `INSERT INTO ${table}(${columns}) VALUES${values};`;
+  return dbRun(sql);
 }
 
 const save = () => {
@@ -120,10 +94,9 @@ const put = async (params) => {
         name: hp.removeSuffix(team), noc_name: noc,
       });
 
+      // Athletes
       const yearOfBirth = (age && age) ? year - age : null;
       const params = hp.hashToText({ height, weight });
-
-      // Athletes
       if (findBuffers.athletes[id] === undefined) {
         findBuffers.athletes[id] = id;
         saveBuffers.athletes.push({
@@ -137,19 +110,15 @@ const put = async (params) => {
       }
 
       // Results
-      const medalValue = {
-        NA: 0, Gold: 1, Silver: 2, Bronze: 3,
-      }[medal];
-
       saveBuffers.results.push({
-        athlete_id: id, game_id: gameId, sport_id: sportId, event_id: eventId, medal: medalValue,
+        athlete_id: id, game_id: gameId, sport_id: sportId, event_id: eventId, medal: medals[medal],
       });
 
       // Save buffers
       if (count === 1000) {
+        await save();
         process.stdout.write('*');
         count = 0;
-        await save();
         saveBuffers.athletes = [];
         saveBuffers.results = [];
       }
