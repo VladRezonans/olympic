@@ -3,7 +3,8 @@
   "description": "Parse csv file",
   "scripts": {
     "lint": "npx eslint *.js --fix",
-    "parse": "node parse.js athlete_events.csv"
+    "parse": "node parse.js athlete_events.csv",
+    "stat": "node stat"
   },
   "version": "1.0.0",
   "dependencies": {

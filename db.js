@@ -25,6 +25,14 @@ const dbRun = (sql) => new Promise((resolve, reject) => {
   });
 });
 
+const dbAll = (sql) => new Promise((resolve, reject) => {
+  database.all(sql, [], (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows);
+    return rows;
+  });
+});
+
 const clear = () => Promise.all(tables.map((table) => dbRun(`DELETE FROM ${table}`)));
 
 async function insert(table, bufKey, params) {
@@ -130,6 +138,7 @@ const put = async (params) => {
 };
 
 module.exports = {
+  dbAll,
   clear,
   put,
   save,
